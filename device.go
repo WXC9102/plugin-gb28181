@@ -352,8 +352,10 @@ func (d *Device) Subscribe() int {
 	expires := sip.Expires(3600)
 	d.subscriber.Timeout = time.Now().Add(time.Second * time.Duration(expires))
 	contentType := sip.ContentType("Application/MANSCDP+xml")
-	request.AppendHeader(&contentType)
+	event := sip.Event("Catalog")
+    request.AppendHeader(&contentType)
 	request.AppendHeader(&expires)
+    request.AppendHeader(&event)
 
 	request.SetBody(BuildCatalogXML(d.sn, d.ID), true)
 
