@@ -217,7 +217,7 @@ func (d *Device) addOrUpdateChannel(channel *Channel) {
 func (d *Device) deleteChannel(DeviceID string) {
 	d.channelMutex.Lock()
 	defer d.channelMutex.Unlock()
-    if c, ok := d.ChannelMap[DeviceID]; ok {
+    if c, ok := d.channelMap[DeviceID]; ok {
 		c.Bye(true)
 	}
 	delete(d.channelMap, DeviceID)
