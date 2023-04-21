@@ -360,6 +360,7 @@ func (channel *Channel) Invite(opt InviteOptions) (code int, err error) {
 				if ls[0] == "y" && len(ls[1]) > 0 {
 					if _ssrc, err := strconv.ParseInt(ls[1], 10, 0); err == nil {
 						opt.SSRC = uint32(_ssrc)
+						publisher.InviteOptions.SSRC = opt.SSRC
 					} else {
 						plugin.Error("read invite response y ", zap.Error(err))
 					}
