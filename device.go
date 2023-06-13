@@ -348,10 +348,10 @@ func (d *Device) CreateRequest(Method sip.RequestMethod) (req sip.Request) {
 
 func (d *Device) Subscribe() int {
 	request := d.CreateRequest(sip.SUBSCRIBE)
-	if d.subscriber.CallID != "" {
-		callId := sip.CallID(utils.RandNumString(10))
-		request.AppendHeader(&callId)
-	}
+	//if d.subscriber.CallID != "" {
+	//	callId := sip.CallID(utils.RandNumString(10))
+	//	request.AppendHeader(&callId)
+	//}
 	expires := sip.Expires(3600)
 	d.subscriber.Timeout = time.Now().Add(time.Second * time.Duration(expires))
 	contentType := sip.ContentType("Application/MANSCDP+xml")
