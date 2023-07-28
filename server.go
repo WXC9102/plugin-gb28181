@@ -153,7 +153,7 @@ func (c *GB28181Config) processTcpMediaConn(conn net.Conn) {
 		if _, err = io.ReadFull(reader, headBuf); err != nil {
 			return
 		}
-		curVer, curPT, curSSRC := c.getRTPHeadInfo(head[2:])
+		curVer, curPT, curSSRC := c.getRTPHeadInfo(headBuf[2:])
 		if rtpSSRC == 0 {
 			rtpVer = curVer
 			rtpPT = curPT
@@ -165,7 +165,7 @@ func (c *GB28181Config) processTcpMediaConn(conn net.Conn) {
 					return
 				}
 				headBuf = headBuf[1:]
-				headBuf = append(headBuf, newByte)
+				headBuf = append(headBuf, newByte...)
 				curVer, curPT, curSSRC = c.getRTPHeadInfo(headBuf[2:])
 			}
 		}
