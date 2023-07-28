@@ -143,15 +143,36 @@ func (c *GB28181Config) startMediaServer() {
 func (c *GB28181Config) processTcpMediaConn(conn net.Conn) {
 	var rtpPacket rtp.Packet
 	reader := bufio.NewReader(conn)
-	lenBuf := make([]byte, 2)
 	defer conn.Close()
+	var rtpVer uint8
+	var rtpPT uint8
+	var rtpSSRC uint32
 	var err error
 	for err == nil {
-		if _, err = io.ReadFull(reader, lenBuf); err != nil {
+		headBuf := make([]byte, 14)
+		if _, err = io.ReadFull(reader, headBuf); err != nil {
 			return
 		}
-		ps := make([]byte, binary.BigEndian.Uint16(lenBuf))
-		if _, err = io.ReadFull(reader, ps); err != nil {
+		curVer, curPT, curSSRC := c.getRTPHeadInfo(head[2:])
+		if rtpSSRC == 0 {
+			rtpVer = curVer
+			rtpPT = curPT
+			rtpSSRC = curSSRC
+		} else {
+			for curVer != rtpVer || curPT != rtpPT || curSSRC != rtpSSRC {
+				newByte := make([]byte, 1)
+				if _, err = io.ReadFull(reader, newByte); err != nil {
+					return
+				}
+				headBuf = headBuf[1:]
+				headBuf = append(headBuf, newByte)
+				curVer, curPT, curSSRC = c.getRTPHeadInfo(headBuf[2:])
+			}
+		}
+
+		ps := make([]byte, binary.BigEndian.Uint16(headBuf[0:2]))
+		copy(ps, headBuf[2:])
+		if _, err = io.ReadFull(reader, ps[12:]); err != nil {
 			return
 		}
 		if err := rtpPacket.Unmarshal(ps); err != nil {
@@ -160,6 +181,21 @@ func (c *GB28181Config) processTcpMediaConn(conn net.Conn) {
 			publisher.PushPS(&rtpPacket)
 		}
 	}
+}
+
+const (
+	versionShift = 6
+	versionMask  = 0x3
+	ptMask       = 0x7F
+	ssrcOffset   = 8
+	ssrcLength   = 4
+)
+
+func (c *GB28181Config) getRTPHeadInfo(head []byte) (ver uint8, pt uint8, ssrc uint32) {
+	ver = head[0] >> versionShift & versionMask
+	pt = head[1] & ptMask
+	ssrc = binary.BigEndian.Uint32(head[ssrcOffset : ssrcOffset+ssrcLength])
+	return
 }
 
 func (c *GB28181Config) listenMediaTCP() {
