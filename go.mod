@@ -62,3 +62,5 @@ require (
 	golang.org/x/tools v0.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/ghettovoice/gosip => github.com/WXC9102/gosip v0.0.0-20221121090201-e502eaa05858

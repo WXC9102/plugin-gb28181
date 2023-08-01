@@ -231,7 +231,9 @@ func (d *Device) addOrUpdateChannel(info ChannelInfo) (c *Channel) {
 }
 
 func (d *Device) deleteChannel(DeviceID string) {
-	d.channelMap.Delete(DeviceID)
+	if c, ok := d.channelMap.LoadAndDelete(DeviceID); ok {
+		c.(*Channel).Bye("")
+	}
 }
 
 func (d *Device) UpdateChannels(list ...ChannelInfo) {
@@ -338,15 +340,17 @@ func (d *Device) CreateRequest(Method sip.RequestMethod) (req sip.Request) {
 
 func (d *Device) Subscribe() int {
 	request := d.CreateRequest(sip.SUBSCRIBE)
-	if d.subscriber.CallID != "" {
-		callId := sip.CallID(utils.RandNumString(10))
-		request.AppendHeader(&callId)
-	}
+	// if d.subscriber.CallID != "" {
+	// 	callId := sip.CallID(utils.RandNumString(10))
+	// 	request.AppendHeader(&callId)
+	// }
 	expires := sip.Expires(3600)
 	d.subscriber.Timeout = time.Now().Add(time.Second * time.Duration(expires))
 	contentType := sip.ContentType("Application/MANSCDP+xml")
+	event := sip.Event("Catalog")
 	request.AppendHeader(&contentType)
 	request.AppendHeader(&expires)
+	request.AppendHeader(&event)
 
 	request.SetBody(BuildCatalogXML(d.sn, d.ID), true)
 
