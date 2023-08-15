@@ -317,7 +317,13 @@ func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 				if conf.InviteMode == 1 {
 					// 5秒后重试
 					time.AfterFunc(time.Second*5, func() {
-						channel.Invite(opt)
+						// channel.Invite(opt)
+						if channel.Status == ChannelOnStatus {
+							channel.Invite(opt)
+						} else {
+							err = fmt.Errorf("channel is %s", channel.Status)
+							channel.Error("invite", zap.Error(err), zap.String("ID", channel.DeviceID))
+						}
 					})
 				}
 			} else {

@@ -531,6 +531,9 @@ func (d *Device) channelOnline(DeviceID string) {
 		c := v.(*Channel)
 		c.Status = ChannelOnStatus
 		c.Debug("channel online", zap.String("channelId", DeviceID))
+		if conf.InviteMode == INVIDE_MODE_AUTO {
+			c.TryAutoInvite(&InviteOptions{})
+		}
 	} else {
 		d.Debug("update channel status failed, not found", zap.String("channelId", DeviceID))
 	}

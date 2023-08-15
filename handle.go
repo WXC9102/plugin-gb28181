@@ -285,6 +285,7 @@ func (c *GB28181Config) OnNotify(req sip.Request, tx sip.ServerTransaction) {
 	id := from.Address.User().String()
 	if v, ok := Devices.Load(id); ok {
 		d := v.(*Device)
+		d.Debug("receive notify", zap.String("msg ", req.String()))
 		d.UpdateTime = time.Now()
 		temp := &struct {
 			XMLName   xml.Name
