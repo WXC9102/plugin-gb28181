@@ -60,7 +60,7 @@ func (c *GB28181Config) OnRegister(req sip.Request, tx sip.ServerTransaction) {
 	}
 	id := from.Address.User().String()
 
-	GB28181Plugin.Debug("SIP<-OnMessage", zap.String("id", id), zap.String("source", req.Source()), zap.String("req", req.String()))
+	GB28181Plugin.Debug("receive register", zap.String("id", id), zap.String("source", req.Source()), zap.String("req", req.String()))
 
 	isUnregister := false
 	if exps := req.GetHeaders("Expires"); len(exps) > 0 {
@@ -198,7 +198,7 @@ func (d *Device) syncChannels() {
 func (c *GB28181Config) OnMessage(req sip.Request, tx sip.ServerTransaction) {
 	from, _ := req.From()
 	id := from.Address.User().String()
-	GB28181Plugin.Debug("SIP<-OnMessage", zap.String("id", id), zap.String("source", req.Source()), zap.String("req", req.String()))
+	GB28181Plugin.Debug("receive message", zap.String("id", id), zap.String("source", req.Source()), zap.String("req", req.String()))
 	if v, ok := Devices.Load(id); ok {
 		d := v.(*Device)
 		switch d.Status {

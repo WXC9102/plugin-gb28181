@@ -254,7 +254,7 @@ func (d *Device) UpdateChannels(list ...ChannelInfo) {
 					continue
 				} else {
 					c.Model = "Directory " + c.Model
-					c.Status = "NoParent"
+					//c.Status = "NoParent"
 				}
 			}
 		}
