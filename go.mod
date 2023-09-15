@@ -6,12 +6,12 @@ require (
 	github.com/ghettovoice/gosip v0.0.0-20221121090201-9a2ed2233b6d
 	github.com/husanpao/ip v0.0.0-20220711082147-73160bb611a8
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/pion/rtp v1.7.13
+	github.com/pion/rtp v1.8.0
 	go.uber.org/zap v1.23.0
 	golang.org/x/net v0.8.0
 	golang.org/x/text v0.8.0
-	m7s.live/engine/v4 v4.12.8
-	m7s.live/plugin/ps/v4 v4.0.1
+	m7s.live/engine/v4 v4.13.8
+	m7s.live/plugin/ps/v4 v4.0.9
 )
 
 require (
