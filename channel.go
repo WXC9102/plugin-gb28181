@@ -376,7 +376,7 @@ func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 		"v=0",
 		fmt.Sprintf("o=%s 0 0 IN IP4 %s", channel.DeviceID, d.mediaIP),
 		"s=" + s,
-		"u=" + channel.DeviceID + ":0",
+		// "u=" + channel.DeviceID + ":0",
 		"c=IN IP4 " + d.mediaIP,
 		opt.String(),
 		fmt.Sprintf("m=video %d %sRTP/AVP 96", opt.MediaPort, protocol),
