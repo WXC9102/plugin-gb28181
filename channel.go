@@ -429,6 +429,7 @@ func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 				}
 			}
 		}
+        channel.Debug("invite receive ps", zap.Uint32("ssrc", opt.SSRC), zap.String("id", channel.DeviceID))
 		err = ps.Receive(streamPath, opt.dump, fmt.Sprintf("%s:%d", networkType, opt.MediaPort), opt.SSRC, reusePort)
 		if err == nil {
 			PullStreams.Store(streamPath, &PullStream{
