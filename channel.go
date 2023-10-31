@@ -374,8 +374,7 @@ func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 
 	sdpInfo := []string{
 		"v=0",
-		// fmt.Sprintf("o=%s 0 0 IN IP4 %s", channel.DeviceID, d.mediaIP),
-		fmt.Sprintf("o=%s 0 0 IN IP4 %s", d.ID, d.mediaIP),
+		fmt.Sprintf("o=%s 0 0 IN IP4 %s", channel.DeviceID, d.mediaIP),
 		"s=" + s,
 		// "u=" + channel.DeviceID + ":0",
 		"c=IN IP4 " + d.mediaIP,
@@ -388,22 +387,32 @@ func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 	if conf.IsMediaNetworkTCP() {
 		sdpInfo = append(sdpInfo, "a=setup:passive", "a=connection:new")
 	}
-	invite := channel.CreateRequst(sip.INVITE)
 	contentType := sip.ContentType("application/sdp")
-	invite.AppendHeader(&contentType)
 
-	invite.SetBody(strings.Join(sdpInfo, "\r\n")+"\r\n", true)
+	var invite sip.Request
+	var inviteRes sip.Response
+	for tryNum := 0; tryNum < 2; tryNum++ {
+		invite = channel.CreateRequst(sip.INVITE)
+		invite.AppendHeader(&contentType)
+		if tryNum == 1 {
+			// HIK
+			sdpInfo[1] = fmt.Sprintf("o=%s 0 0 IN IP4 %s", d.ID, d.mediaIP)
+		}
+		invite.SetBody(strings.Join(sdpInfo, "\r\n")+"\r\n", true)
 
-	subject := sip.GenericHeader{
-		HeaderName: "Subject", Contents: fmt.Sprintf("%s:%s,%s:0", channel.DeviceID, opt.ssrc, conf.Serial),
+		subject := sip.GenericHeader{
+			HeaderName: "Subject", Contents: fmt.Sprintf("%s:%s,%s:0", channel.DeviceID, opt.ssrc, conf.Serial),
+		}
+		invite.AppendHeader(&subject)
+		inviteRes, err = d.SipRequestForResponse(invite)
+		if err != nil {
+			channel.Error("invite", zap.Error(err), zap.String("msg", invite.String()))
+			return http.StatusInternalServerError, err
+		}
+		if code = int(inviteRes.StatusCode()); code != http.StatusBadRequest {
+			break
+		}
 	}
-	invite.AppendHeader(&subject)
-	inviteRes, err := d.SipRequestForResponse(invite)
-	if err != nil {
-		channel.Error("invite", zap.Error(err), zap.String("msg", invite.String()))
-		return http.StatusInternalServerError, err
-	}
-	code = int(inviteRes.StatusCode())
 	channel.Info("invite response", zap.Int("status code", code))
 
 	if code == http.StatusOK {
