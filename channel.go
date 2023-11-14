@@ -38,6 +38,7 @@ func (p *PullStream) CreateRequest(method sip.RequestMethod) (req sip.Request) {
 }
 
 func (p *PullStream) Bye() int {
+	log.Debugf("send Bye to %s", p.channel.DeviceID)
 	req := p.CreateRequest(sip.BYE)
 	resp, err := p.channel.device.SipRequestForResponse(req)
 	if p.opt.IsLive() {
@@ -310,27 +311,37 @@ func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 		if !channel.status.CompareAndSwap(0, 1) {
 			return 304, nil
 		}
+	}
+
+	return channel.invite(opt)
+}
+
+func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
+	if opt.IsLive() {
 		defer func() {
 			if err != nil {
-				GB28181Plugin.Error("Invite", zap.Error(err))
-				channel.status.Store(0)
-				if conf.InviteMode == 1 {
-					// 5秒后重试
-					time.AfterFunc(time.Second*5, func() {
-						// channel.Invite(opt)
-						if channel.Status == ChannelOnStatus {
-							channel.Invite(opt)
-						} else {
-							err = fmt.Errorf("channel is %s", channel.Status)
-							channel.Error("invite", zap.Error(err), zap.String("ID", channel.DeviceID))
-						}
-					})
+				channel.Error("invite", zap.Error(err))
+				if conf.InviteMode != INVIDE_MODE_AUTO {
+					channel.status.Store(0)
+					return
 				}
+				// 5秒后重试
+				time.AfterFunc(time.Second*5, func() {
+					if channel.Status == ChannelOnStatus {
+						channel.invite(opt)
+					} else {
+						err = fmt.Errorf("channel is %s", channel.Status)
+						channel.Error("invite", zap.Error(err), zap.String("ID", channel.DeviceID))
+						channel.status.Store(0)
+						return
+					}
+				})
 			} else {
 				channel.status.Store(2)
 			}
 		}()
 	}
+
 	d := channel.device
 	streamPath := fmt.Sprintf("%s/%s", d.ID, channel.DeviceID)
 	s := "Play"
