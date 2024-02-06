@@ -418,7 +418,7 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 		inviteRes, err = d.SipRequestForResponse(invite)
 		if err != nil {
 			channel.Error("invite", zap.Error(err), zap.String("msg", invite.String()))
-			return http.StatusInternalServerError, err
+			// return http.StatusInternalServerError, err
 		}
 		if code = int(inviteRes.StatusCode()); code != http.StatusBadRequest {
 			break
