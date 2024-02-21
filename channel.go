@@ -383,6 +383,14 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 		opt.MediaPort = conf.MediaPort
 	}
 
+	// 媒体端口没有监听invite时, 对端探测失败返回400
+	if reusePort {
+		err = ps.Listen(fmt.Sprintf("%s:%d", networkType, opt.MediaPort))
+		if err != nil {
+			channel.Warn("invite listen", zap.Error(err))
+		}
+	}
+
 	sdpInfo := []string{
 		"v=0",
 		fmt.Sprintf("o=%s 0 0 IN IP4 %s", channel.DeviceID, d.mediaIP),
