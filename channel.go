@@ -143,6 +143,7 @@ type ChannelStatus string
 const (
 	ChannelOnStatus  = "ON"
 	ChannelOffStatus = "OFF"
+	ChannelDelStatus = "DEL"
 )
 
 func (channel *Channel) CreateRequst(Method sip.RequestMethod) (req sip.Request) {

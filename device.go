@@ -231,8 +231,10 @@ func (d *Device) addOrUpdateChannel(info ChannelInfo) (c *Channel) {
 }
 
 func (d *Device) deleteChannel(DeviceID string) {
-	if c, ok := d.channelMap.LoadAndDelete(DeviceID); ok {
-		c.(*Channel).Bye("")
+	if v, ok := d.channelMap.LoadAndDelete(DeviceID); ok {
+		c := v.(*Channel)
+		c.Status = ChannelDelStatus
+		c.Bye("")
 	}
 }
 
