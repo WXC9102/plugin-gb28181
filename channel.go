@@ -464,6 +464,8 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 				}
 			}
 		}
+
+		channel.Info("invite start publish stream", zap.String("path", streamPath), zap.Uint32("ssrc", opt.SSRC))
 		err = ps.Receive(streamPath, opt.dump, fmt.Sprintf("%s:%d", networkType, opt.MediaPort), opt.SSRC, reusePort)
 		if err == nil {
 			PullStreams.Store(streamPath, &PullStream{
