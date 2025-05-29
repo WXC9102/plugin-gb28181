@@ -122,6 +122,10 @@ func (c *GB28181Config) OnEvent(event any) {
 			channel.LiveSubSP = e.Target.Path
 		}
 	case SEclose:
+		GB28181Plugin.Debug("SEclose",
+			zap.String("appName", e.Target.AppName),
+			zap.String("streamName", e.Target.StreamName),
+			zap.String("path", e.Target.Path))
 		if channel := FindChannel(e.Target.AppName, strings.TrimSuffix(e.Target.StreamName, "/rtsp")); channel != nil {
 			channel.LiveSubSP = ""
 		}

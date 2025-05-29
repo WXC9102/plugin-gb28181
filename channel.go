@@ -42,6 +42,7 @@ func (p *PullStream) Bye() int {
 	req := p.CreateRequest(sip.BYE)
 	resp, err := p.channel.device.SipRequestForResponse(req)
 	if p.opt.IsLive() {
+		log.Debugf("channel %s status value set 0", p.channel.DeviceID)
 		p.channel.status.Store(0)
 	}
 	if p.opt.recyclePort != nil {
@@ -309,6 +310,7 @@ f字段中视、音频参数段之间不需空格分割。
 
 func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
 	if opt.IsLive() {
+		channel.Debug("Invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
 		if !channel.status.CompareAndSwap(0, 1) {
 			return 304, nil
 		}
@@ -321,9 +323,10 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 	if opt.IsLive() {
 		defer func() {
 			if err != nil {
-				channel.Error("invite", zap.Error(err))
+				channel.Error("invite", zap.String("channel", channel.DeviceID), zap.Error(err))
 				if conf.InviteMode != INVIDE_MODE_AUTO {
 					channel.status.Store(0)
+					channel.Debug("invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
 					return
 				}
 				// 5秒后重试
@@ -339,6 +342,7 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 				})
 			} else {
 				channel.status.Store(2)
+				channel.Debug("invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
 			}
 		}()
 	}
@@ -439,7 +443,7 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 			break
 		}
 	}
-	channel.Info("invite response", zap.Int("status code", code))
+	channel.Info("invite", zap.Int("status code", code), zap.Any("request", invite), zap.Any("response", inviteRes))
 
 	if code == http.StatusOK {
 		ds := strings.Split(inviteRes.Body(), "\r\n")
@@ -480,6 +484,7 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 }
 
 func (channel *Channel) Bye(streamPath string) int {
+	channel.Debug("Bye", zap.String("channel", channel.DeviceID), zap.String("streamPath", streamPath))
 	d := channel.device
 	if streamPath == "" {
 		streamPath = fmt.Sprintf("%s/%s", d.ID, channel.DeviceID)
@@ -544,6 +549,8 @@ func (channel *Channel) TryAutoInvite(opt *InviteOptions) {
 }
 
 func (channel *Channel) CanInvite() bool {
+	channel.Debug("CanInvite", zap.String("channel", channel.DeviceID),
+		zap.Int32("status", channel.status.Load()), zap.Any("Status", channel.Status))
 	if channel.status.Load() != 0 || len(channel.DeviceID) != 20 || channel.Status == ChannelOffStatus {
 		return false
 	}
