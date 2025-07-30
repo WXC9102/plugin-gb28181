@@ -309,40 +309,27 @@ f字段中视、音频参数段之间不需空格分割。
 */
 
 func (channel *Channel) Invite(opt *InviteOptions) (code int, err error) {
-	if opt.IsLive() {
-		channel.Debug("Invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
-		if !channel.status.CompareAndSwap(0, 1) {
-			return 304, nil
-		}
-	}
-
 	return channel.invite(opt)
 }
 
 func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 	if opt.IsLive() {
+		channel.Debug("Invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
+		if !channel.status.CompareAndSwap(0, 1) {
+			return 304, nil
+		}
+
 		defer func() {
-			if err != nil {
-				channel.Error("invite", zap.String("channel", channel.DeviceID), zap.Error(err))
-				if conf.InviteMode != INVIDE_MODE_AUTO {
-					channel.status.Store(0)
-					channel.Debug("invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
-					return
-				}
-				// 5秒后重试
-				time.AfterFunc(time.Second*5, func() {
-					if channel.Status == ChannelOnStatus {
-						channel.invite(opt)
-					} else {
-						err = fmt.Errorf("channel is %s", channel.Status)
-						channel.Error("invite", zap.Error(err), zap.String("ID", channel.DeviceID))
-						channel.status.Store(0)
-						return
-					}
-				})
-			} else {
+			if err == nil && code == http.StatusOK {
 				channel.status.Store(2)
-				channel.Debug("invite", zap.String("channel", channel.DeviceID), zap.Int32("stauts", channel.status.Load()))
+				channel.Debug("invite", zap.String("channel", channel.DeviceID), zap.String("msg", "success"))
+			} else {
+				channel.status.Store(0)
+				msg := fmt.Sprintf("code: %d", code)
+				if err != nil {
+					msg = fmt.Sprintf("%s, err: %s", msg, err.Error())
+				}
+				channel.Error("invite", zap.String("channel", channel.DeviceID), zap.String("msg", msg))
 			}
 		}()
 	}
@@ -393,6 +380,7 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 		err = ps.Listen(fmt.Sprintf("%s:%d", networkType, opt.MediaPort))
 		if err != nil {
 			channel.Warn("invite listen", zap.Error(err))
+			return http.StatusInternalServerError, err
 		}
 	}
 
@@ -415,34 +403,21 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 
 	var invite sip.Request
 	var inviteRes sip.Response
-	for tryNum := 0; tryNum < 2; tryNum++ {
-		invite = channel.CreateRequst(sip.INVITE)
-		invite.AppendHeader(&contentType)
-		if tryNum == 1 {
-			// HIK
-			sdpInfo[1] = fmt.Sprintf("o=%s 0 0 IN IP4 %s", d.ID, d.mediaIP)
-		}
-		invite.SetBody(strings.Join(sdpInfo, "\r\n")+"\r\n", true)
+	invite = channel.CreateRequst(sip.INVITE)
+	invite.AppendHeader(&contentType)
+	invite.SetBody(strings.Join(sdpInfo, "\r\n")+"\r\n", true)
 
-		subject := sip.GenericHeader{
-			HeaderName: "Subject", Contents: fmt.Sprintf("%s:%s,%s:0", channel.DeviceID, opt.ssrc, conf.Serial),
-		}
-		invite.AppendHeader(&subject)
-		inviteRes, err = d.SipRequestForResponse(invite)
-		if err != nil {
-			if strings.Contains(err.Error(), "Bad Request (Code 400)") {
-				code = http.StatusBadRequest
-			} else {
-				channel.Error("invite", zap.Error(err), zap.String("msg", invite.String()))
-				return http.StatusInternalServerError, err
-			}
-		} else {
-			code = int(inviteRes.StatusCode())
-		}
-		if code != http.StatusBadRequest {
-			break
-		}
+	subject := sip.GenericHeader{
+		HeaderName: "Subject", Contents: fmt.Sprintf("%s:%s,%s:0", channel.DeviceID, opt.ssrc, conf.Serial),
 	}
+	invite.AppendHeader(&subject)
+	inviteRes, err = d.SipRequestForResponse(invite)
+	if err != nil {
+		channel.Error("invite", zap.Error(err), zap.String("msg", invite.String()))
+		return http.StatusInternalServerError, err
+	}
+	code = int(inviteRes.StatusCode())
+
 	channel.Info("invite", zap.Int("status code", code), zap.Any("request", invite), zap.Any("response", inviteRes))
 
 	if code == http.StatusOK {
@@ -450,10 +425,10 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 		for _, l := range ds {
 			if ls := strings.Split(l, "="); len(ls) > 1 {
 				if ls[0] == "y" && len(ls[1]) > 0 {
-					if _ssrc, err := strconv.ParseInt(ls[1], 10, 0); err == nil {
+					if _ssrc, err1 := strconv.ParseInt(ls[1], 10, 0); err1 == nil {
 						opt.SSRC = uint32(_ssrc)
 					} else {
-						channel.Error("read invite response y ", zap.Error(err))
+						channel.Error("read invite response y ", zap.Error(err1))
 					}
 					//	break
 				}
@@ -477,9 +452,10 @@ func (channel *Channel) invite(opt *InviteOptions) (code int, err error) {
 				channel:   channel,
 				inviteRes: inviteRes,
 			})
-			err = srv.Send(sip.NewAckRequest("", invite, inviteRes, "", nil))
 		}
 	}
+
+	srv.Send(sip.NewAckRequest("", invite, inviteRes, "", nil))
 	return
 }
 
